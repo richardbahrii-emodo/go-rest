@@ -3,6 +3,7 @@ package controllers
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/richardbahrii-emodo/go-rest/database"
+	"github.com/richardbahrii-emodo/go-rest/helpers"
 	"github.com/richardbahrii-emodo/go-rest/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -17,21 +18,15 @@ func GetAllTodo(c *fiber.Ctx) error {
 	cursor, err := collection.Find(c.Context(), bson.M{}, options.Find())
 
 	if err != nil {
-		return c.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusInternalServerError, err.Error(), false, nil)
 	}
 
 	todos := make([]models.Todo, 0)
 	if err = cursor.All(c.Context(), &todos); err != nil {
-		return c.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusInternalServerError, err.Error(), false, nil)
 	}
 
-	return c.Status(200).JSON(todos)
+	return helpers.SendMessage(c, fiber.StatusOK, "", true, todos)
 }
 
 type createTodoDTO struct {
@@ -43,29 +38,20 @@ func CreateTodo(c *fiber.Ctx) error {
 	todo := new(createTodoDTO)
 
 	if err := c.BodyParser(todo); err != nil {
-		return c.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusBadRequest, err.Error(), false, nil)
 	}
 
 	collection := database.GetCollection(collectionName)
 	res, err := collection.InsertOne(c.Context(), todo)
 
 	if err != nil {
-		return c.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusBadRequest, err.Error(), false, nil)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": false,
-		"todo": fiber.Map{
-			"id":        res.InsertedID,
-			"completed": todo.Completed,
-			"title":     todo.Title,
-		},
+	return helpers.SendMessage(c, fiber.StatusOK, "Succesfully created todo.", true, fiber.Map{
+		"id":        res.InsertedID,
+		"completed": todo.Completed,
+		"title":     todo.Title,
 	})
 }
 
@@ -80,19 +66,13 @@ func UpdateTodo(c *fiber.Ctx) error {
 
 	dbID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return c.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusBadRequest, err.Error(), false, nil)
 	}
 
 	updatedTodo := new(updateTodoDTO)
 
 	if err = c.BodyParser(updatedTodo); err != nil {
-		return c.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusBadRequest, err.Error(), false, nil)
 	}
 
 	collection := database.GetCollection(collectionName)
@@ -100,18 +80,12 @@ func UpdateTodo(c *fiber.Ctx) error {
 	res := collection.FindOneAndUpdate(c.Context(), bson.M{"_id": dbID}, bson.M{"$set": updatedTodo})
 
 	if res.Err() != nil {
-		return c.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"success": false,
-			"message": res.Err().Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusInternalServerError, res.Err().Error(), false, nil)
 	}
 
 	updatedTodo.ID = dbID
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success": true,
-		"todo":    updatedTodo,
-	})
+	return helpers.SendMessage(c, fiber.StatusOK, "Successfully updated todo.", true, updatedTodo)
 }
 
 func DeleteTodo(c *fiber.Ctx) error {
@@ -119,10 +93,7 @@ func DeleteTodo(c *fiber.Ctx) error {
 
 	dbID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return c.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusBadGateway, err.Error(), false, nil)
 	}
 
 	collection := database.GetCollection(collectionName)
@@ -130,14 +101,11 @@ func DeleteTodo(c *fiber.Ctx) error {
 	_, err = collection.DeleteOne(c.Context(), bson.M{"_id": dbID})
 
 	if err != nil {
-		return c.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
-			"success": false,
-			"message": err.Error(),
-		})
+		return helpers.SendMessage(c, fiber.StatusInternalServerError, err.Error(), false, nil)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"success":   true,
+	return helpers.SendMessage(c, fiber.StatusOK, "Successfully deleted todo.", true, fiber.Map{
 		"deletedId": dbID,
 	})
+
 }
