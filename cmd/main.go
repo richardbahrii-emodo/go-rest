@@ -62,5 +62,4 @@ func gracefullyShutdown(app *fiber.App) {
 
 		fmt.Println("Server stopped.")
 	}()
-
 }
