@@ -1,1 +1,9 @@
 .env
+/tmp
+pre_cmd.txt
+post_cmd.txt
+
+.vscode
+.idea
+
+air
