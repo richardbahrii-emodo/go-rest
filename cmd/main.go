@@ -28,7 +28,7 @@ func initApplication() error {
 		return err
 	}
 
-	err = database.InitDB()
+	err = database.InitDatabase("mongo")
 	if err != nil {
 		return err
 	}

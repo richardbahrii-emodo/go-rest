@@ -9,13 +9,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var db *mongo.Database
-
-func GetCollection(name string) *mongo.Collection {
-	return db.Collection(name)
+type MongoDb struct {
+	client *mongo.Database
 }
 
-func InitDB() error {
+func (m *MongoDb) Connect() error {
 	uri := os.Getenv("MONGO_URI")
 	if uri == "" {
 		return errors.New("you must set 'MONGO_URI' env variable ")
@@ -38,11 +36,57 @@ func InitDB() error {
 		return errors.New("some problem with connection")
 	}
 
-	db = client.Database(database)
+	m.client = client.Database(database)
 
 	return nil
 }
 
-func CloseDb() error {
-	return db.Client().Disconnect(context.Background())
+func (m *MongoDb) Close() error {
+	return m.client.Client().Disconnect(context.Background())
+}
+
+func (m *MongoDb) InsertOne(collection string, data interface{}) (interface{}, error) {
+	res, err := m.client.Collection(collection).InsertOne(context.Background(), data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (m *MongoDb) UpdateOne(collection string, filter interface{}, data interface{}) (interface{}, error) {
+	res := m.client.Collection(collection).FindOneAndUpdate(context.Background(), filter, data)
+
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+
+	return res.Decode(data), nil
+}
+
+func (m *MongoDb) DeleteOne(collection string, filter interface{}) error {
+	_, err := m.client.Collection(collection).DeleteOne(context.Background(), filter)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MongoDb) FindAll(collection string, filter interface{}) ([]interface{}, error) {
+	cursor, err := m.client.Collection(collection).Find(context.Background(), filter)
+
+	if err != nil {
+		return nil, err
+	}
+
+	data := make([]interface{}, 1)
+
+	if err = cursor.All(context.Background(), &data); err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
