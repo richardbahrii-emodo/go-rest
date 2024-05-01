@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/richardbahrii-emodo/go-rest/config"
+	"github.com/richardbahrii-emodo/go-rest/controllers"
 	"github.com/richardbahrii-emodo/go-rest/database"
 	"github.com/richardbahrii-emodo/go-rest/routes"
 )
@@ -22,24 +23,21 @@ func main() {
 }
 
 func initApplication() error {
-
 	err := config.LoadENV()
 	if err != nil {
 		return err
 	}
 
-	err = database.InitDatabase("mongo")
-	if err != nil {
-		return err
-	}
-
+	db := database.InitDatabase("mongo")
 	app := fiber.New()
 
 	prefix := app.Group("/api")
 
-	routes.AddTodoGroup(prefix)
+	mainHandler := controllers.NewHandlerWithDb(db)
 
-	gracefullyShutdown(app)
+	routes.AddTodoGroup(prefix, mainHandler)
+
+	gracefullyShutdown(app, db)
 
 	if err = app.Listen(":" + os.Getenv("PORT")); err != nil {
 		return err
@@ -48,7 +46,7 @@ func initApplication() error {
 	return nil
 }
 
-func gracefullyShutdown(app *fiber.App) {
+func gracefullyShutdown(app *fiber.App, db database.Database) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	signal.Notify(c, syscall.SIGTERM)
@@ -58,7 +56,7 @@ func gracefullyShutdown(app *fiber.App) {
 		fmt.Println("Gracefully shutdown.")
 
 		defer app.Shutdown()
-		defer database.CloseDb()
+		defer db.Close()
 
 		fmt.Println("Server stopped.")
 	}()

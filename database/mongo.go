@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -76,7 +77,11 @@ func (m *MongoDb) DeleteOne(collection string, filter interface{}) error {
 }
 
 func (m *MongoDb) FindAll(collection string, filter interface{}) ([]interface{}, error) {
-	cursor, err := m.client.Collection(collection).Find(context.Background(), filter)
+	if filter == nil {
+		filter = bson.M{}
+	}
+
+	cursor, err := m.client.Collection(collection).Find(context.Background(), filter, options.Find())
 
 	if err != nil {
 		return nil, err

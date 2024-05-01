@@ -5,13 +5,13 @@ import (
 	"github.com/richardbahrii-emodo/go-rest/controllers"
 )
 
-func AddTodoGroup(prefix fiber.Router) fiber.Router {
+func AddTodoGroup(prefix fiber.Router, mainHandler *controllers.HandlerWithDb) fiber.Router {
 	todos := prefix.Group("/todos")
 
-	todos.Get("/", controllers.GetAllTodo)
-	todos.Post("/", controllers.CreateTodo)
-	todos.Put("/:id", controllers.UpdateTodo)
-	todos.Delete("/:id", controllers.DeleteTodo)
+	todos.Get("/", mainHandler.GetAllTodo)
+	todos.Post("/", mainHandler.CreateTodo)
+	todos.Put("/:id", mainHandler.UpdateTodo)
+	todos.Delete("/:id", mainHandler.DeleteTodo)
 
 	return todos
 }
